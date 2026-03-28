@@ -22,44 +22,76 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        upsertUser(session.user);
-      }
-      setLoading(false);
-    });
+    // 🔹 Initial session load
+    const loadSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        upsertUser(session.user);
+      if (error) {
+        console.error('Session error:', error);
       }
-      setLoading(false);
-    });
 
-    return () => subscription.unsubscribe();
+      setSession(data.session);
+      setUser(data.session?.user ?? null);
+
+      if (data.session?.user) {
+        await upsertUser(data.session.user);
+      }
+
+      setLoading(false);
+    };
+
+    loadSession();
+
+    // 🔹 Auth listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          await upsertUser(session.user);
+        }
+
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
+  // 🔹 Insert / Update user in DB
   const upsertUser = async (user: User) => {
     try {
-      const { error } = await supabase.from('users').upsert({
-        id: user.id,
-        email: user.email,
-        created_at: new Date().toISOString(),
-      }, { onConflict: 'id' });
+      const { error } = await supabase.from('users').upsert(
+        {
+          id: user.id,
+          email: user.email,
+          full_name: user.user_metadata?.full_name || null,
+          created_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      );
+
       if (error) {
-        console.error('Error upserting user:', error);
+        console.error('User upsert error:', error.message);
       }
     } catch (err) {
-      console.error('Unexpected error upserting user:', err);
+      console.error('Unexpected upsert error:', err);
     }
   };
 
+  // 🔹 Logout
   const signOut = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error('Logout error:', error.message);
+    } else {
+      setSession(null);
+      setUser(null);
+    }
   };
 
   return (
@@ -69,4 +101,5 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+// 🔹 Hook
 export const useAuth = () => useContext(AuthContext);
