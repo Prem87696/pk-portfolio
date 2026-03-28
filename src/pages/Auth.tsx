@@ -1,149 +1,158 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import { supabase } from '../services/supabase';
-import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 export default function Auth() {
+  const [tab, setTab] = useState<'login' | 'signup'>('login');
+  const [step, setStep] = useState<'form' | 'otp'>('form');
+
   const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'email' | 'otp'>('email');
 
-  const { user } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (user) {
-      navigate('/dashboard');
-    }
-  }, [user, navigate]);
-
-  // ✅ STEP 1: SEND OTP
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!email) {
-      toast.error('Please enter email');
-      return;
-    }
+  // 🔹 SEND OTP
+  const sendOtp = async () => {
+    if (!email) return toast.error('Enter email');
 
     setLoading(true);
 
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: true,
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: true,
+        data: {
+          full_name: name,
         },
-      });
+      },
+    });
 
-      if (error) throw error;
+    setLoading(false);
 
+    if (error) {
+      toast.error(error.message);
+    } else {
       setStep('otp');
-      toast.success('OTP sent successfully!');
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error.message || 'Failed to send OTP');
-    } finally {
-      setLoading(false);
+      toast.success('OTP sent!');
     }
   };
 
-  // ✅ STEP 2: VERIFY OTP
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!otp) {
-      toast.error('Enter OTP');
-      return;
-    }
+  // 🔹 VERIFY OTP
+  const verifyOtp = async () => {
+    if (!otp) return toast.error('Enter OTP');
 
     setLoading(true);
 
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: 'email',
-      });
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: otp,
+      type: 'email',
+    });
 
-      if (error) throw error;
+    setLoading(false);
 
-      if (data?.session) {
-        toast.success('Login successful!');
-        navigate('/dashboard');
-      } else {
-        toast.error('Invalid OTP');
-      }
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error.message || 'OTP verification failed');
-    } finally {
-      setLoading(false);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Login successful');
+      navigate('/dashboard');
     }
   };
 
   return (
-    <div className="max-w-md mx-auto py-12 px-4">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold mb-2">
-          {step === 'email' ? 'Login / Signup' : 'Enter OTP'}
-        </h1>
-        <p className="text-zinc-500">
-          {step === 'email'
-            ? 'Enter your email to receive OTP'
-            : `OTP sent to ${email}`}
-        </p>
+    <div className="max-w-md mx-auto py-16 px-4">
+      {/* Tabs */}
+      <div className="flex mb-6 bg-zinc-800 rounded-lg p-1">
+        <button
+          onClick={() => { setTab('login'); setStep('form'); }}
+          className={`flex-1 py-2 rounded-md ${tab === 'login' ? 'bg-white text-black' : 'text-white'}`}
+        >
+          Login
+        </button>
+        <button
+          onClick={() => { setTab('signup'); setStep('form'); }}
+          className={`flex-1 py-2 rounded-md ${tab === 'signup' ? 'bg-white text-black' : 'text-white'}`}
+        >
+          Signup
+        </button>
       </div>
 
-      {step === 'email' ? (
-        <form onSubmit={handleSendOtp} className="space-y-4">
+      {/* Heading */}
+      <h1 className="text-3xl font-bold mb-2 text-center">
+        {step === 'form'
+          ? tab === 'login'
+            ? 'Welcome Back'
+            : 'Create Account'
+          : 'Enter OTP'}
+      </h1>
+
+      <p className="text-center text-zinc-500 mb-6">
+        {step === 'form'
+          ? tab === 'login'
+            ? 'Login with your email'
+            : 'Signup with your details'
+          : `OTP sent to ${email}`}
+      </p>
+
+      {/* FORM */}
+      {step === 'form' ? (
+        <div className="space-y-4">
+          {tab === 'signup' && (
+            <input
+              type="text"
+              placeholder="Full Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2 rounded-md border bg-zinc-900"
+            />
+          )}
+
           <input
             type="email"
-            required
+            placeholder="Email Address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
-            className="w-full px-4 py-2 rounded-md border border-zinc-300 bg-white dark:bg-zinc-900 focus:outline-none"
+            className="w-full px-4 py-2 rounded-md border bg-zinc-900"
           />
 
           <button
-            type="submit"
+            onClick={sendOtp}
             disabled={loading}
-            className="w-full bg-black text-white py-2 rounded-md disabled:opacity-50"
+            className="w-full bg-white text-black py-2 rounded-md"
           >
-            {loading ? 'Sending OTP...' : 'Send OTP'}
+            {loading ? 'Sending...' : 'Continue'}
           </button>
-        </form>
+        </div>
       ) : (
-        <form onSubmit={handleVerifyOtp} className="space-y-4">
+        // OTP STEP
+        <div className="space-y-4">
           <input
             type="text"
-            required
             maxLength={6}
             value={otp}
             onChange={(e) => setOtp(e.target.value)}
-            placeholder="Enter 6 digit OTP"
-            className="w-full px-4 py-2 rounded-md border border-zinc-300 bg-white dark:bg-zinc-900 text-center text-xl tracking-widest focus:outline-none"
+            placeholder="Enter OTP"
+            className="w-full px-4 py-2 rounded-md border text-center text-xl tracking-widest bg-zinc-900"
           />
 
           <button
-            type="submit"
+            onClick={verifyOtp}
             disabled={loading}
-            className="w-full bg-black text-white py-2 rounded-md disabled:opacity-50"
+            className="w-full bg-white text-black py-2 rounded-md"
           >
             {loading ? 'Verifying...' : 'Verify OTP'}
           </button>
 
           <button
-            type="button"
-            onClick={handleSendOtp}
-            className="w-full text-sm text-blue-500"
+            onClick={sendOtp}
+            className="w-full text-sm text-blue-400"
           >
             Resend OTP
           </button>
-        </form>
+        </div>
       )}
     </div>
   );
