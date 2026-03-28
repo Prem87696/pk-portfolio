@@ -1,0 +1,5 @@
+{
+  "name": "Portfolio App",
+  "description": "A production-ready portfolio web app using React (Vite) and Supabase.",
+  "requestFramePermissions": []
+}
