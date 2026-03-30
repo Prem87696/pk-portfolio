@@ -168,11 +168,86 @@ export default function Layout() {
         <Outlet />
       </main>
 
-      <footer className="border-t border-zinc-200 dark:border-zinc-800 py-8">
-        <div className="container mx-auto px-4 text-center text-sm text-zinc-500 dark:text-zinc-400">
-          &copy; {new Date().getFullYear()} Portfolio. All rights reserved.
-        </div>
-      </footer>
+     <footer className="bg-zinc-900 border-t border-zinc-800 mt-16">
+
+  {/* TOP SECTION */}
+  <div className="max-w-6xl mx-auto px-4 py-12 grid md:grid-cols-4 gap-8">
+
+    {/* BRAND */}
+    <div>
+      <h2 className="text-xl font-bold text-white">PK Portfolio</h2>
+      <p className="text-zinc-400 mt-3 text-sm">
+        Building modern, scalable web applications with clean UI & performance focus.
+      </p>
+    </div>
+
+    {/* NAVIGATION */}
+    <div>
+      <h3 className="text-white font-semibold mb-3">Quick Links</h3>
+      <ul className="space-y-2 text-zinc-400 text-sm">
+        <li><a href="/" className="hover:text-white">Home</a></li>
+        <li><a href="/about" className="hover:text-white">About</a></li>
+        <li><a href="/projects" className="hover:text-white">Projects</a></li>
+        <li><a href="/contact" className="hover:text-white">Contact</a></li>
+      </ul>
+    </div>
+
+    {/* SERVICES / SKILLS */}
+    <div>
+      <h3 className="text-white font-semibold mb-3">Services</h3>
+      <ul className="space-y-2 text-zinc-400 text-sm">
+        <li>Web Development</li>
+        <li>UI/UX Design</li>
+        <li>React Apps</li>
+        <li>API Integration</li>
+      </ul>
+    </div>
+
+    {/* CONTACT */}
+    <div>
+      <h3 className="text-white font-semibold mb-3">Contact</h3>
+      <ul className="space-y-2 text-zinc-400 text-sm">
+        <li>Email: prem@example.com</li>
+        <li>Location: India</li>
+      </ul>
+
+      {/* SOCIAL */}
+      <div className="flex gap-3 mt-4 text-zinc-400">
+        <a href="#" className="hover:text-white">🌐</a>
+        <a href="#" className="hover:text-white">🐦</a>
+        <a href="#" className="hover:text-white">💼</a>
+      </div>
+    </div>
+
+  </div>
+
+  {/* NEWSLETTER */}
+  <div className="border-t border-zinc-800 py-6">
+    <div className="max-w-4xl mx-auto px-4 text-center">
+      <h3 className="text-white font-semibold mb-2">Subscribe to Newsletter</h3>
+      <p className="text-zinc-400 text-sm mb-4">
+        Get latest updates and projects directly in your inbox.
+      </p>
+
+      <div className="flex max-w-md mx-auto">
+        <input
+          type="email"
+          placeholder="Enter your email"
+          className="flex-1 px-4 py-2 bg-zinc-800 text-white rounded-l-md outline-none"
+        />
+        <button className="bg-white text-black px-4 rounded-r-md">
+          Subscribe
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {/* BOTTOM */}
+  <div className="border-t border-zinc-800 py-4 text-center text-sm text-zinc-500">
+    © 2026 PK Portfolio. All rights reserved.
+  </div>
+
+</footer>
     </div>
   );
 }
