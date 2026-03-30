@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { supabase } from '../services/supabase';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -9,25 +9,22 @@ export default function Auth() {
 
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
-  const [otp, setOtp] = useState('');
+  const [otp, setOtp] = useState(Array(8).fill(''));
   const [loading, setLoading] = useState(false);
 
+  const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
   const navigate = useNavigate();
 
-  // 🔹 SEND OTP
+  // 🔹 SEND CODE
   const sendOtp = async () => {
-    if (!email) return toast.error('Enter email');
+    if (!email || !email.includes('@')) {
+      return toast.error('Enter valid email');
+    }
 
     setLoading(true);
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: {
-        shouldCreateUser: true,
-        data: {
-          full_name: name,
-        },
-      },
     });
 
     setLoading(false);
@@ -36,34 +33,80 @@ export default function Auth() {
       toast.error(error.message);
     } else {
       setStep('otp');
-      toast.success('OTP sent!');
+      toast.success('Code sent!');
     }
   };
 
-  // 🔹 VERIFY OTP
+  // 🔹 VERIFY CODE
   const verifyOtp = async () => {
-    if (!otp) return toast.error('Enter OTP');
+    const finalOtp = otp.join('');
+
+    if (finalOtp.length !== 8) {
+      return toast.error('Enter valid 8 digit code');
+    }
 
     setLoading(true);
 
     const { error } = await supabase.auth.verifyOtp({
       email,
-      token: otp,
+      token: finalOtp,
       type: 'email',
     });
 
     setLoading(false);
 
     if (error) {
-      toast.error(error.message);
+      toast.error('Invalid code');
     } else {
       toast.success('Login successful');
       navigate('/dashboard');
     }
   };
 
+  // 🔹 INPUT CHANGE
+  const handleChange = (value: string, index: number) => {
+    if (!/^\d?$/.test(value)) return;
+
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
+    if (value && inputsRef.current[index + 1]) {
+      inputsRef.current[index + 1]?.focus();
+    }
+  };
+
+  // 🔹 BACKSPACE
+  const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (e.key === 'Backspace') {
+      if (!otp[index] && inputsRef.current[index - 1]) {
+        inputsRef.current[index - 1]?.focus();
+      }
+
+      const newOtp = [...otp];
+      newOtp[index] = '';
+      setOtp(newOtp);
+    }
+  };
+
+  // 🔹 PASTE SUPPORT
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const paste = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 8);
+    if (!paste) return;
+
+    const newOtp = paste.split('');
+    setOtp([...newOtp, ...Array(8 - newOtp.length).fill('')]);
+
+    newOtp.forEach((_, i) => {
+      if (inputsRef.current[i]) {
+        inputsRef.current[i]!.value = newOtp[i];
+      }
+    });
+  };
+
   return (
     <div className="max-w-md mx-auto py-16 px-4">
+
       {/* Tabs */}
       <div className="flex mb-6 bg-zinc-800 rounded-lg p-1">
         <button
@@ -86,7 +129,7 @@ export default function Auth() {
           ? tab === 'login'
             ? 'Welcome Back'
             : 'Create Account'
-          : 'Enter OTP'}
+          : 'Enter Code'}
       </h1>
 
       <p className="text-center text-zinc-500 mb-6">
@@ -94,7 +137,7 @@ export default function Auth() {
           ? tab === 'login'
             ? 'Login with your email'
             : 'Signup with your details'
-          : `OTP sent to ${email}`}
+          : `Code sent to ${email}`}
       </p>
 
       {/* FORM */}
@@ -127,31 +170,42 @@ export default function Auth() {
           </button>
         </div>
       ) : (
-        // OTP STEP
-        <div className="space-y-4">
-          <input
-            type="text"
-            maxLength={6}
-            value={otp}
-            onChange={(e) => setOtp(e.target.value)}
-            placeholder="Enter OTP"
-            className="w-full px-4 py-2 rounded-md border text-center text-xl tracking-widest bg-zinc-900"
-          />
+        // 🔥 PRO OTP UI
+        <div className="space-y-6">
+
+          <div
+            className="flex justify-center gap-2"
+            onPaste={handlePaste}
+          >
+            {otp.map((digit, i) => (
+              <input
+                key={i}
+                ref={(el) => (inputsRef.current[i] = el)}
+                type="text"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handleChange(e.target.value, i)}
+                onKeyDown={(e) => handleKeyDown(e, i)}
+                className="w-10 h-12 text-center text-xl rounded-md bg-zinc-900 border border-zinc-700 focus:border-white outline-none"
+              />
+            ))}
+          </div>
 
           <button
             onClick={verifyOtp}
             disabled={loading}
             className="w-full bg-white text-black py-2 rounded-md"
           >
-            {loading ? 'Verifying...' : 'Verify OTP'}
+            {loading ? 'Verifying...' : 'Verify Code'}
           </button>
 
           <button
             onClick={sendOtp}
             className="w-full text-sm text-blue-400"
           >
-            Resend OTP
+            Resend Code
           </button>
+
         </div>
       )}
     </div>
